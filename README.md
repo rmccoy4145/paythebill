@@ -1,7 +1,8 @@
 # Pay The Bill
-
-I hate bills but since Mint webapp is gone, I needed a way to track my bills... so I made this. 
-It's a simple way to track your bills.
+Bills...the bane of humans existence. I needed a way to track my bills, so I spent a Saturday and made 
+this simple app to do just that. This app allows you to place bills on a monthly schedule, view them 
+on a calendar, mark them as paid, then go on with your day. No fancy databases are used, only the 
+browser's local storage is used to store your data. 
 
 ## Features
 - Bill schedule places due dates on the calendar on the day of the month they are due
@@ -16,3 +17,13 @@ It's a simple way to track your bills.
 - Remove Bill from schedule
 - View bills due within the next month
 - View bills due on a specific day
+- Ability to Save local storage to a file
+
+## Tech Stack
+- Nodejs
+- NextJs
+- TailwindCSS
+- Shadcn
+
+## Considerations
+- Refractor state that is saved to localstorage into an object
