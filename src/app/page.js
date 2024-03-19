@@ -25,18 +25,22 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 
+// local storage keys
+const localstorageBillsKey = "scheduled-bills";
+const localstoragePaidBillsKey = "paid-bills";
+
 export default function Home() {
   const [refreshCount, setRefreshCount] = useState(0);
   const [dueDates, setDueDates] = useState([]);
-  const [scheduledBills, setScheduledBills] = useState([]);
   const [currentBills, setCurrentBills] = useState([]);
-  const [paidBills, setPaidBills] = useState([]);
   const [noBills, setNoBills] = useState(false);
   const [newScheduledBillValue, setNewScheduledBillValue] = useState(
       {name: "", amount: "", dayDue: ""}
   );
-  const localstorageBillsKey = "scheduled-bills";
-  const localstoragePaidBillsKey = "paid-bills";
+
+  // localstorage persistent state
+  const [scheduledBills_ls, setScheduledBills_ls] = useState([]);
+  const [paidBills_ls, setPaidBills_ls] = useState([]);
 
 
   // Load from local storage when the component mounts
@@ -50,12 +54,12 @@ export default function Home() {
 
       if (storedScheduledBills) {
         parsedSchedule = JSON.parse(storedScheduledBills)
-        setScheduledBills(parsedSchedule);
+        setScheduledBills_ls(parsedSchedule);
       }
 
       if (storedPaidBills) {
         parsedPaidBills = JSON.parse(storedPaidBills)
-        setPaidBills(parsedPaidBills);
+        setPaidBills_ls(parsedPaidBills);
       }
 
         if (parsedSchedule.length > 0) {
@@ -106,12 +110,14 @@ export default function Home() {
       return;
     }
     const dueDate = createDateFromDay(newScheduledBillValue.dayDue);
+
     const newScheduledBill = {
       id: uuidv4(),
       name: newScheduledBillValue.name,
       amount: newScheduledBillValue.amount,
       dayDue: newScheduledBillValue.dayDue
     };
+
     const newCurrentBill = {
       id: uuidv4(),
       schBillId: newScheduledBill.id,
@@ -120,20 +126,23 @@ export default function Home() {
       dueDate: dueDate,
       paid: false
     };
-    const updatedScheduledBills = [...scheduledBills, newScheduledBill];
+
+    const updatedScheduledBills = [...scheduledBills_ls, newScheduledBill];
     const updatedCurrentBills = [...currentBills, newCurrentBill];
-    setScheduledBills(updatedScheduledBills);
+    setScheduledBills_ls(updatedScheduledBills);
     setCurrentBills(updatedCurrentBills);
+
     if (typeof window !== "undefined") {
       localStorage.setItem(localstorageBillsKey, JSON.stringify(updatedScheduledBills));
     }
+
     setRefreshCount(refreshCount + 1);
   };
 
   const markBillPaid = (newPaidBill) => {
     newPaidBill.paid = true;
-    const updatedPaidBills = [...paidBills, newPaidBill];
-    setPaidBills(updatedPaidBills);
+    const updatedPaidBills = [...paidBills_ls, newPaidBill];
+    setPaidBills_ls(updatedPaidBills);
     if (typeof window !== "undefined") {
       localStorage.setItem(localstoragePaidBillsKey, JSON.stringify(updatedPaidBills));
     }
@@ -161,6 +170,14 @@ export default function Home() {
                 height={150}
                 placeholder="blur"
             />
+            <div className="flex flex-row gap-x-3 justify-self-end pl-5">
+            <Button onClick={loadLocalStorage} variant="outline" size="sm" className="px-3">
+              Save
+            </Button>
+            <Button onClick={downloadLocalStorage} variant="outline" size="sm" className="px-3">
+              Load
+            </Button>
+            </div>
           </div>
           <div className="flex flex-row w-full gap-x-32 justify-center">
             <div className="flex flex-col">
@@ -192,6 +209,69 @@ export default function Home() {
       </div>
     </main>
   );
+}
+
+function loadJsonToLocalStorage(jsonFile) {
+  // Create a new FileReader object
+  let reader = new FileReader();
+
+  // Setup the onload event for the reader
+  reader.onload = function(event) {
+    // The file's text will be printed here
+    let data = JSON.parse(event.target.result);
+
+    // Iterate over the object and store each key-value pair in local storage
+    for (let key in data) {
+      localStorage.setItem(key, JSON.stringify(data[key]));
+    }
+  };
+
+  // Read the file as text
+  reader.readAsText(jsonFile);
+}
+
+function loadLocalStorage() {
+  // Create an object to hold local storage data
+  let localStorageData = {};
+
+  for (let key in [localstorageBillsKey, localstoragePaidBillsKey]) {
+    localStorageData[key] = JSON.parse(localStorage.getItem(key));
+  }
+
+  // Convert object to JSON
+  let json = JSON.stringify(localStorageData);
+  let blob = new Blob([json], {type: "application/json"});
+  let url = URL.createObjectURL(blob);
+
+  // Create a link to download the JSON file
+  let link = document.createElement('a');
+  link.href = url;
+  link.download = 'localStorage.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function downloadLocalStorage() {
+  // Create an object to hold local storage data
+  let localStorageData = {};
+
+  for (let key in [localstorageBillsKey, localstoragePaidBillsKey]) {
+    localStorageData[key] = JSON.parse(localStorage.getItem(key));
+  }
+
+  // Convert object to JSON
+  let json = JSON.stringify(localStorageData);
+  let blob = new Blob([json], {type: "application/json"});
+  let url = URL.createObjectURL(blob);
+
+  // Create a link to download the JSON file
+  let link = document.createElement('a');
+  link.href = url;
+  link.download = 'localStorage.json';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function BillCard({bill, payHandler}) {
