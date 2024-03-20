@@ -24,19 +24,28 @@ import {
   DialogClose, DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 // local storage keys
-const localstorageBillsKey = "scheduled-bills";
-const localstoragePaidBillsKey = "paid-bills";
+const localstorageKeys = {
+  schBillsKey: "scheduled-bills",
+  paidBillsKey: "paid-bills"
+};
 
 export default function Home() {
-  const [refreshCount, setRefreshCount] = useState(0);
   const [dueDates, setDueDates] = useState([]);
   const [currentBills, setCurrentBills] = useState([]);
   const [noBills, setNoBills] = useState(false);
   const [newScheduledBillValue, setNewScheduledBillValue] = useState(
       {name: "", amount: "", dayDue: ""}
   );
+
+  // refresh count to force useEffect to run
+  const [refreshCount, setRefreshCount] = useState(0);
 
   // localstorage persistent state
   const [scheduledBills_ls, setScheduledBills_ls] = useState([]);
@@ -46,18 +55,18 @@ export default function Home() {
   // Load from local storage when the component mounts
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedScheduledBills = localStorage.getItem(localstorageBillsKey);
-      const storedPaidBills = localStorage.getItem(localstoragePaidBillsKey);
+      const storedScheduledBills = localStorage.getItem(localstorageKeys.schBillsKey);
+      const storedPaidBills = localStorage.getItem(localstorageKeys.paidBillsKey);
 
       let parsedSchedule = [];
       let parsedPaidBills = [];
 
-      if (storedScheduledBills) {
+      if (storedScheduledBills && storedPaidBills !== "null") {
         parsedSchedule = JSON.parse(storedScheduledBills)
         setScheduledBills_ls(parsedSchedule);
       }
 
-      if (storedPaidBills) {
+      if (storedPaidBills && storedPaidBills !== "null") {
         parsedPaidBills = JSON.parse(storedPaidBills)
         setPaidBills_ls(parsedPaidBills);
       }
@@ -92,19 +101,6 @@ export default function Home() {
     }
   }, [refreshCount]);
 
-  // const handleDayClick = (day, modifiers) => {
-  //   const newSelectedDays = [...days];
-  //   if (modifiers.selected) {
-  //     const index = selectedDays.findIndex((selectedDay) =>
-  //         isSameDay(day, selectedDay)
-  //     );
-  //     newSelectedDays.splice(index, 1);
-  //   } else {
-  //     newSelectedDays.push(day);
-  //   }
-  //   setDays(newSelectedDays);
-  // };
-
   const saveNewBill = () => {
     if (newScheduledBillValue.name === "" || newScheduledBillValue.amount === "" || newScheduledBillValue.dayDue === "") {
       return;
@@ -133,7 +129,7 @@ export default function Home() {
     setCurrentBills(updatedCurrentBills);
 
     if (typeof window !== "undefined") {
-      localStorage.setItem(localstorageBillsKey, JSON.stringify(updatedScheduledBills));
+      localStorage.setItem(localstorageKeys.schBillsKey, JSON.stringify(updatedScheduledBills));
     }
 
     setRefreshCount(refreshCount + 1);
@@ -144,7 +140,7 @@ export default function Home() {
     const updatedPaidBills = [...paidBills_ls, newPaidBill];
     setPaidBills_ls(updatedPaidBills);
     if (typeof window !== "undefined") {
-      localStorage.setItem(localstoragePaidBillsKey, JSON.stringify(updatedPaidBills));
+      localStorage.setItem(localstorageKeys.paidBillsKey, JSON.stringify(updatedPaidBills));
     }
     setRefreshCount(refreshCount + 1);
   };
@@ -160,7 +156,8 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="flex-col z-10 max-w-5xl w-full font-mono text-sm lg:flex">
-          <div className="flex flex-row items-center justify-center pb-5">
+          <div className="flex flex-row w-full justify-between mb-10">
+            <div className="flex flex-row items-center w-3/4 justify-start ml-10">
             <p className="text-4xl font-thin">Pay The Bill</p>
             <Image
                 className="rounded-full"
@@ -170,17 +167,24 @@ export default function Home() {
                 height={150}
                 placeholder="blur"
             />
-            <div className="flex flex-row gap-x-3 justify-self-end pl-5">
-            <Button onClick={loadLocalStorage} variant="outline" size="sm" className="px-3">
-              Save
-            </Button>
-            <Button onClick={downloadLocalStorage} variant="outline" size="sm" className="px-3">
-              Load
-            </Button>
             </div>
+            <Popover>
+              <PopoverTrigger className="mr-10">Menu</PopoverTrigger>
+              <PopoverContent>
+                <div className="flex flex-col gap-y-3">
+                  <input type="file" id="fileInput" style={{display: 'none'}} onChange={uploadBillData}/>
+                  <Button onClick={() => window.document.getElementById('fileInput').click()} variant="outline" size="sm">
+                    Upload Bill Data
+                  </Button>
+                  <Button onClick={downloadBillData} variant="outline" size="sm">
+                    Download Bill Data
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
-          <div className="flex flex-row w-full gap-x-32 justify-center">
-            <div className="flex flex-col">
+        <div className="flex flex-row w-full gap-x-32 justify-center">
+          <div className="flex flex-col">
               <div className="flex flex-row w-full justify-center p-4">
                 <p>Due Date Calendar</p>
               </div>
@@ -209,69 +213,6 @@ export default function Home() {
       </div>
     </main>
   );
-}
-
-function loadJsonToLocalStorage(jsonFile) {
-  // Create a new FileReader object
-  let reader = new FileReader();
-
-  // Setup the onload event for the reader
-  reader.onload = function(event) {
-    // The file's text will be printed here
-    let data = JSON.parse(event.target.result);
-
-    // Iterate over the object and store each key-value pair in local storage
-    for (let key in data) {
-      localStorage.setItem(key, JSON.stringify(data[key]));
-    }
-  };
-
-  // Read the file as text
-  reader.readAsText(jsonFile);
-}
-
-function loadLocalStorage() {
-  // Create an object to hold local storage data
-  let localStorageData = {};
-
-  for (let key in [localstorageBillsKey, localstoragePaidBillsKey]) {
-    localStorageData[key] = JSON.parse(localStorage.getItem(key));
-  }
-
-  // Convert object to JSON
-  let json = JSON.stringify(localStorageData);
-  let blob = new Blob([json], {type: "application/json"});
-  let url = URL.createObjectURL(blob);
-
-  // Create a link to download the JSON file
-  let link = document.createElement('a');
-  link.href = url;
-  link.download = 'localStorage.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
-
-function downloadLocalStorage() {
-  // Create an object to hold local storage data
-  let localStorageData = {};
-
-  for (let key in [localstorageBillsKey, localstoragePaidBillsKey]) {
-    localStorageData[key] = JSON.parse(localStorage.getItem(key));
-  }
-
-  // Convert object to JSON
-  let json = JSON.stringify(localStorageData);
-  let blob = new Blob([json], {type: "application/json"});
-  let url = URL.createObjectURL(blob);
-
-  // Create a link to download the JSON file
-  let link = document.createElement('a');
-  link.href = url;
-  link.download = 'localStorage.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 }
 
 function BillCard({bill, payHandler}) {
@@ -354,11 +295,65 @@ function AddBillButton({inputHandler, submitHandler}) {
 }
 
 // helper functions
+function uploadBillData(event) {
+  let jsonFile = event.target.files[0];
+  // Create a new FileReader object
+  let reader = new FileReader();
+
+  // Setup the onload event for the reader
+  reader.onload = function(readerEvent) {
+    // The file's text will be printed here
+    let data = JSON.parse(readerEvent.target.result);
+
+    // Iterate over the object and store each key-value pair in local storage
+    for (let key in data) {
+      if(Object.values(localstorageKeys).includes(key)) {
+        if(data[key] !== null) {
+          localStorage.setItem(key, JSON.stringify(data[key]));
+        }
+      }
+    }
+  };
+
+  // Read the file as text
+  reader.readAsText(jsonFile);
+}
+
+function downloadBillData() {
+  // Create an object to hold local storage data
+  let localStorageData = {};
+
+  for (let key of Object.values(localstorageKeys)) {
+    localStorageData[key] = JSON.parse(localStorage.getItem(key));
+  }
+  console.log(localStorageData);
+  // Convert object to JSON
+  let json = JSON.stringify(localStorageData);
+  let blob = new Blob([json], {type: "application/json"});
+  let url = URL.createObjectURL(blob);
+
+  // Create a link to download the JSON file
+  let link = document.createElement('a');
+  link.href = url;
+  const currentDate = formatBillDownloadDate(new Date());
+  link.download = `billdata-${currentDate}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function formatDate(date) {
-  console.log(date)
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
+    day: 'numeric',
+  });
+}
+
+function formatBillDownloadDate(date) {
+  return date.toLocaleDateString('en-US', {
+    year: '2-digit',
+    month: '2-digit',
     day: 'numeric',
   });
 }
