@@ -185,8 +185,9 @@ export default function Home() {
           </div>
         <div className="flex flex-row w-full gap-x-32 justify-center">
           <div className="flex flex-col">
-              <div className="flex flex-row w-full justify-center p-4">
+              <div className="flex flex-row w-full justify-between items-center pb-2">
                 <p>Due Date Calendar</p>
+                <AddBillButton inputHandler={handleAddBillInputChange} submitHandler={saveNewBill} />
               </div>
               <Calendar
                   className="rounded-md border w-72 animate-fade-in-once"
@@ -194,13 +195,12 @@ export default function Home() {
                   selected={dueDates}
               />
             </div>
-            <div className="flex flex-col gap-y-3 h-96 overflow-y-scroll">
+            <div className="flex flex-col gap-y-3 h-[800px] overflow-y-scroll">
               <div className="flex flex-row w-full justify-between items-center pb-2 pr-5">
               <p>Bills for the Month</p>
-              <AddBillButton inputHandler={handleAddBillInputChange} submitHandler={saveNewBill} />
               </div>
               {noBills ? <NoBillsCard/> :
-                currentBills.length > 0 ? currentBills.map((bill) => (
+                currentBills.length > 0 ? sortBillsByDateAndPaid(currentBills).map((bill) => (
                 <BillCard
                     key={bill.id}
                     bill={bill}
@@ -272,7 +272,7 @@ function AddBillButton({inputHandler, submitHandler}) {
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Bill</DialogTitle>
+            <DialogTitle>Add Bill to Schedule</DialogTitle>
             <DialogDescription>
               I feel bad for you dawg...
             </DialogDescription>
@@ -365,3 +365,16 @@ function createDateFromDay(day) {
   return new Date(year, month, day);
 }
 
+function sortBillsByDateAndPaid(bills) {
+  return bills.sort((a,b) => {
+    if (!a.paid && b.paid) {
+      return -1;
+    }
+
+    if (a.paid && !b.paid) {
+      return 1;
+    }
+
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+}
