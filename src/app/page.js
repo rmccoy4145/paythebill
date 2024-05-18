@@ -43,6 +43,7 @@ export default function Home() {
   const [newScheduledBillValue, setNewScheduledBillValue] = useState(
       {name: "", amount: "", dayDue: ""}
   );
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
 
   // refresh count to force useEffect to run
   const [refreshCount, setRefreshCount] = useState(0);
@@ -78,7 +79,7 @@ export default function Home() {
               schBillId: schBill.id,
               name: schBill.name,
               amount: schBill.amount,
-              dueDate: createDateFromDay(schBill.dayDue),
+              dueDate: createDateFromDay(schBill.dayDue, selectedMonth),
               paid: false
             }
 
@@ -99,13 +100,13 @@ export default function Home() {
           setNoBills(true);
         }
     }
-  }, [refreshCount]);
+  }, [refreshCount, selectedMonth]);
 
   const saveNewBill = () => {
     if (newScheduledBillValue.name === "" || newScheduledBillValue.amount === "" || newScheduledBillValue.dayDue === "") {
       return;
     }
-    const dueDate = createDateFromDay(newScheduledBillValue.dayDue);
+    const dueDate = createDateFromDay(newScheduledBillValue.dayDue, null);
 
     const newScheduledBill = {
       id: uuidv4(),
@@ -193,6 +194,7 @@ export default function Home() {
                   className="rounded-md border w-72 animate-fade-in-once"
                   inputProps={{ readOnly: true, disabled: true }}
                   selected={dueDates}
+                  onMonthChange={(calMonth) => setSelectedMonth(calMonth.getMonth())}
               />
             </div>
             <div className="flex flex-col gap-y-3 h-[800px] overflow-y-scroll">
@@ -358,10 +360,10 @@ function formatBillDownloadDate(date) {
   });
 }
 
-function createDateFromDay(day) {
+function createDateFromDay(day, specificMonth) {
   const now = new Date();
   const year = now.getFullYear();
-  const month = now.getMonth();
+  const month = specificMonth ? specificMonth : now.getMonth();
   return new Date(year, month, day);
 }
 
