@@ -33,6 +33,7 @@ Bills...the bane of human existence. Frustrated with the relentless drain on our
 
 
 ## Usage
+![PayTheBill2024-05-19 104434](https://github.com/rmccoy4145/paythebill/assets/30878588/7ba95084-d546-4d36-9cac-9467dd0da6bf)
 
 1. Open the app in your browser.
 2. Add your bills to the monthly schedule.
