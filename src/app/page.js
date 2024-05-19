@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Image from "next/image";
 import stressedImage from '../../public/stressed.jpg'
 import { Calendar } from "@/components/ui/calendar"
-import {useEffect, useState} from "react";
-import {isSameDay} from "date-fns";
+import React from "react";
+import {isSameDay, isSameMonth} from "date-fns";
 import {
   Card,
   CardContent,
@@ -37,24 +37,25 @@ const localstorageKeys = {
 };
 
 export default function Home() {
-  const [dueDates, setDueDates] = useState([]);
-  const [currentBills, setCurrentBills] = useState([]);
-  const [noBills, setNoBills] = useState(false);
-  const [newScheduledBillValue, setNewScheduledBillValue] = useState(
+  const [dueDates, setDueDates] = React.useState([]);
+  const [currentBills, setCurrentBills] = React.useState([]);
+  const [tempBillSchedule, setTempBillSchedule] = React.useState([]);
+  const [noBills, setNoBills] = React.useState(false);
+  const [newScheduledBillValue, setNewScheduledBillValue] = React.useState(
       {name: "", amount: "", dayDue: ""}
   );
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedMonth, setSelectedMonth] = React.useState(new Date().getMonth());
 
   // refresh count to force useEffect to run
-  const [refreshCount, setRefreshCount] = useState(0);
+  const [refreshCount, setRefreshCount] = React.useState(0);
 
   // localstorage persistent state
-  const [scheduledBills_ls, setScheduledBills_ls] = useState([]);
-  const [paidBills_ls, setPaidBills_ls] = useState([]);
+  const [scheduledBills_ls, setScheduledBills_ls] = React.useState([]);
+  const [paidBills_ls, setPaidBills_ls] = React.useState([]);
 
 
   // Load from local storage when the component mounts
-  useEffect(() => {
+  React.useEffect(() => {
     if (typeof window !== "undefined") {
       const storedScheduledBills = localStorage.getItem(localstorageKeys.schBillsKey);
       const storedPaidBills = localStorage.getItem(localstorageKeys.paidBillsKey);
@@ -65,6 +66,7 @@ export default function Home() {
       if (storedScheduledBills && storedPaidBills !== "null") {
         parsedSchedule = JSON.parse(storedScheduledBills)
         setScheduledBills_ls(parsedSchedule);
+        setTempBillSchedule(parsedSchedule);
       }
 
       if (storedPaidBills && storedPaidBills !== "null") {
@@ -85,7 +87,7 @@ export default function Home() {
 
             // Check if the bill has been paid
             if (parsedPaidBills.length > 0) {
-              if(parsedPaidBills.find(paidBill => paidBill.schBillId === schBill.id && isSameDay(new Date(paidBill.dueDate), currentMappedBill.dueDate))) {
+              if(parsedPaidBills.find(paidBill => paidBill.schBillId === schBill.id && isSameMonth(new Date(paidBill.dueDate), currentMappedBill.dueDate))) {
                 currentMappedBill.paid = true;
               }
             }
@@ -136,6 +138,22 @@ export default function Home() {
     setRefreshCount(refreshCount + 1);
   };
 
+  const updateBillScheduleHandler = () => {
+    setScheduledBills_ls([...tempBillSchedule]);
+    setTempBillSchedule([...tempBillSchedule]);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(localstorageKeys.schBillsKey, JSON.stringify(tempBillSchedule));
+    }
+    setRefreshCount(refreshCount + 1);
+  }
+
+  const updateTempBillSchedule = (e) => {
+    const { id, name, value } = e.target;
+    const billIndex = tempBillSchedule.findIndex(bill => bill.id === id);
+    tempBillSchedule[billIndex][name] = value;
+    setTempBillSchedule([...tempBillSchedule]);
+  };
+
   const markBillPaid = (newPaidBill) => {
     newPaidBill.paid = true;
     const updatedPaidBills = [...paidBills_ls, newPaidBill];
@@ -169,26 +187,14 @@ export default function Home() {
                 placeholder="blur"
             />
             </div>
-            <Popover>
-              <PopoverTrigger className="mr-10">Menu</PopoverTrigger>
-              <PopoverContent>
-                <div className="flex flex-col gap-y-3">
-                  <input type="file" id="fileInput" style={{display: 'none'}} onChange={uploadBillData}/>
-                  <Button onClick={() => window.document.getElementById('fileInput').click()} variant="outline" size="sm">
-                    Upload Bill Data
-                  </Button>
-                  <Button onClick={downloadBillData} variant="outline" size="sm">
-                    Download Bill Data
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <MenuButton />
           </div>
         <div className="flex flex-row w-full gap-x-32 justify-center">
           <div className="flex flex-col">
               <div className="flex flex-row w-full justify-between items-center pb-2">
                 <p>Due Date Calendar</p>
                 <AddBillButton inputHandler={handleAddBillInputChange} submitHandler={saveNewBill} />
+                <BillScheduleEditFormButton setTempBillScheduleHandler={updateTempBillSchedule} updateBillScheduleHandler={updateBillScheduleHandler} scheduledBills={tempBillSchedule} />
               </div>
               <Calendar
                   className="rounded-md border w-72 animate-fade-in-once"
@@ -215,6 +221,25 @@ export default function Home() {
       </div>
     </main>
   );
+}
+
+function MenuButton() {
+  return (
+      <Popover>
+        <PopoverTrigger className="mr-10">Menu</PopoverTrigger>
+        <PopoverContent>
+          <div className="flex flex-col gap-y-3">
+            <input type="file" id="fileInput" style={{display: 'none'}} onChange={uploadBillData}/>
+            <Button onClick={() => window.document.getElementById('fileInput').click()} variant="outline" size="sm">
+              Upload Bill Data
+            </Button>
+            <Button onClick={downloadBillData} variant="outline" size="sm">
+              Download Bill Data
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+  )
 }
 
 function BillCard({bill, payHandler}) {
@@ -319,6 +344,51 @@ function uploadBillData(event) {
 
   // Read the file as text
   reader.readAsText(jsonFile);
+}
+
+function BillScheduleEditFormButton({updateBillScheduleHandler, setTempBillScheduleHandler, scheduledBills}) {
+
+  return (
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline">edit</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Bill Schedule</DialogTitle>
+          </DialogHeader>
+          <div className="flex-col">
+            <div className="flex gap-4 pb-1">
+              <span className="flex-1">Name</span>
+              <span className="flex-1">Amount</span>
+              <span className="flex-1">DayDue</span>
+            </div>
+            {scheduledBills.length > 0 ? scheduledBills.map((bill) => (
+                <div className="flex gap-2 pb-1">
+                  <Input id={bill.id} key={bill.id + "name"} onChange={setTempBillScheduleHandler} value={bill.name}
+                         name="name"/>
+                  <Input id={bill.id} key={bill.id + "amount"} onChange={setTempBillScheduleHandler} value={bill.amount}
+                         name="amount"/>
+                  <Input id={bill.id} key={bill.id + "dueday"} onChange={setTempBillScheduleHandler} value={bill.dayDue}
+                         name="dayDue"/>
+                </div>
+            ))
+                : <div className="center">
+                    <p>No bills to edit</p>
+                  </div>
+                  }
+                  <div className="pt-5">
+            <DialogTrigger asChild>
+              <Button onClick={updateBillScheduleHandler} variant="secondary"
+                      type="submit" size="sm" className="px-3 w-full">
+                Update
+              </Button>
+            </DialogTrigger>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+  )
 }
 
 function downloadBillData() {
