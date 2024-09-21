@@ -1,5 +1,13 @@
 name: Build and Publish Docker Image
 
+on:
+  push:
+    branches:
+      - master  # Trigger the workflow on pushes to the main branch
+  pull_request:
+    branches:
+      - master
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
